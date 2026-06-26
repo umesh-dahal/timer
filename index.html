@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Honesty Timer - iPhone</title>
+    <title>Honesty Timer Pro</title>
     <style>
         * {
             margin: 0;
@@ -27,24 +27,24 @@
         }
 
         h1 {
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0 12px 0;
+            padding: 6px 0 10px 0;
             border-bottom: 1px solid #1e293b;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
-        h1 span:first-child {
-            font-size: 1.3rem;
+        h1 .title {
+            font-size: 1.2rem;
         }
         .live-clock {
             background: #1e293b;
-            padding: 6px 16px;
+            padding: 4px 12px;
             border-radius: 40px;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #38bdf8;
             letter-spacing: 2px;
@@ -52,13 +52,50 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .top-actions {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .top-actions button {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            touch-action: manipulation;
+            flex: 1;
+            min-width: 60px;
+            transition: 0.1s;
+        }
+        .top-actions button:active {
+            transform: scale(0.94);
+            opacity: 0.8;
+        }
+        .top-actions .export-btn {
+            background: #059669;
+            color: #fff;
+        }
+        .top-actions .export-btn:active {
+            background: #34d399;
+        }
+        .top-actions .maybe-btn {
+            background: #7c3aed;
+            color: #fff;
+        }
+        .top-actions .maybe-btn:active {
+            background: #a78bfa;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin: 14px 0;
+            gap: 6px;
+            margin: 10px 0;
             background: #1e293b;
-            padding: 14px;
+            padding: 12px;
             border-radius: 14px;
             border-left: 4px solid #38bdf8;
         }
@@ -69,13 +106,13 @@
             text-align: center;
         }
         .stats-grid .stat-item .label {
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             text-transform: uppercase;
             color: #94a3b8;
             letter-spacing: 0.3px;
         }
         .stats-grid .stat-item .value {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
             color: #f1f5f9;
             margin-top: 2px;
@@ -93,19 +130,19 @@
         .input-section {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             background: #1e293b;
-            padding: 16px;
+            padding: 14px;
             border-radius: 14px;
-            margin: 14px 0;
+            margin: 10px 0;
             align-items: center;
         }
         .input-section input,
         .input-section button {
-            padding: 14px 14px;
+            padding: 12px 12px;
             border-radius: 12px;
             border: none;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             background: #0f172a;
             color: #f1f5f9;
             border: 1px solid #334155;
@@ -118,22 +155,21 @@
         }
         .input-section input[type="text"] {
             flex: 2;
-            min-width: 140px;
+            min-width: 120px;
         }
         .input-section input[type="time"] {
-            width: 120px;
-            padding: 14px 10px;
+            width: 100px;
+            padding: 12px 8px;
         }
         .input-section button {
             background: #38bdf8;
             color: #0b1120;
             font-weight: 700;
             cursor: pointer;
-            transition: 0.15s;
             border: none;
-            padding: 14px 20px;
+            padding: 12px 16px;
             flex: 1;
-            min-width: 80px;
+            min-width: 70px;
             touch-action: manipulation;
         }
         .input-section button:active {
@@ -148,32 +184,18 @@
             background: #7f1d1d;
         }
 
-        .test-alarm-btn {
-            background: #7c3aed !important;
-            color: #fff !important;
-            flex: 0.5 !important;
-            min-width: 60px !important;
-            font-size: 0.8rem !important;
-        }
-        .test-alarm-btn:active {
-            background: #a78bfa !important;
-        }
-
         .timeline {
             background: #1e293b;
             border-radius: 14px;
-            padding: 14px;
-            margin: 14px 0;
+            padding: 12px;
+            margin: 10px 0;
             border: 1px solid #2d3a4f;
-        }
-        .timeline-header {
-            display: none;
         }
         .timeline-grid {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            max-height: 520px;
+            gap: 6px;
+            max-height: 450px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding-right: 2px;
@@ -186,17 +208,15 @@
             border-radius: 8px;
         }
 
-        /* Task Row */
         .task-row {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            padding: 14px;
+            gap: 4px;
+            padding: 12px;
             border-radius: 12px;
             background: #0f172a;
             border-left: 4px solid #475569;
             transition: 0.15s;
-            touch-action: manipulation;
         }
         .task-row.active {
             background: #064e3b;
@@ -205,6 +225,9 @@
         }
         .task-row.finished-alarm {
             animation: flashRed 0.5s ease 3;
+        }
+        .task-row.flash-alert {
+            animation: flashYellow 0.3s ease 5;
         }
         @keyframes flashRed {
             0% {
@@ -216,8 +239,17 @@
                 border-left: 4px solid #475569;
             }
         }
+        @keyframes flashYellow {
+            0% {
+                background: #78350f;
+                border-left: 4px solid #fbbf24;
+            }
+            100% {
+                background: #0f172a;
+                border-left: 4px solid #475569;
+            }
+        }
 
-        /* Normal view */
         .task-row .task-top {
             display: flex;
             justify-content: space-between;
@@ -229,19 +261,19 @@
             font-family: monospace;
             font-weight: 600;
             color: #94a3b8;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             letter-spacing: 0.3px;
         }
         .task-row .task-name {
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
             flex: 1;
         }
         .task-row .task-stats {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #94a3b8;
             padding: 2px 0;
         }
@@ -257,7 +289,7 @@
             width: 100%;
         }
         .task-row .task-progress .bar-bg {
-            height: 6px;
+            height: 5px;
             background: #2d3a4f;
             border-radius: 10px;
             overflow: hidden;
@@ -269,28 +301,29 @@
             transition: width 0.5s linear;
         }
         .task-row .task-progress .percent {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: #94a3b8;
-            margin-top: 3px;
+            margin-top: 2px;
             display: block;
         }
+
         .task-row .task-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             margin-top: 4px;
             flex-wrap: wrap;
         }
         .task-row .task-actions button {
             border: none;
-            padding: 10px 18px;
+            padding: 8px 14px;
             border-radius: 30px;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             cursor: pointer;
-            transition: 0.1s;
             touch-action: manipulation;
             flex: 1;
-            min-width: 60px;
+            min-width: 50px;
+            transition: 0.1s;
         }
         .task-row .task-actions button:active {
             transform: scale(0.94);
@@ -300,58 +333,39 @@
             background: #4ade80;
             color: #052e16;
         }
-        .task-row .task-actions .start-btn:active {
-            background: #86efac;
-        }
         .task-row .task-actions .stop-btn {
             background: #f59e0b;
             color: #0b1120;
         }
-        .task-row .task-actions .stop-btn:active {
-            background: #fbbf24;
-        }
         .task-row .task-actions .edit-btn {
             background: #3b82f6;
             color: #fff;
-            flex: 0.7;
-            min-width: 50px;
-        }
-        .task-row .task-actions .edit-btn:active {
-            background: #60a5fa;
+            flex: 0.6;
+            min-width: 45px;
         }
         .task-row .task-actions .delete-btn {
             background: #451a1a;
             color: #fca5a5;
             flex: 0.5;
-            min-width: 50px;
-        }
-        .task-row .task-actions .delete-btn:active {
-            background: #7f1d1d;
+            min-width: 45px;
         }
         .task-row .task-actions .save-edit-btn {
             background: #22d3ee;
             color: #0b1120;
             flex: 1;
         }
-        .task-row .task-actions .save-edit-btn:active {
-            background: #67e8f9;
-        }
         .task-row .task-actions .cancel-edit-btn {
             background: #475569;
             color: #f1f5f9;
             flex: 0.5;
-            min-width: 50px;
-        }
-        .task-row .task-actions .cancel-edit-btn:active {
-            background: #64748b;
+            min-width: 45px;
         }
 
-        /* Edit mode fields */
         .task-row .edit-fields {
             display: none;
             flex-wrap: wrap;
-            gap: 8px;
-            padding: 8px 0;
+            gap: 6px;
+            padding: 6px 0;
             width: 100%;
         }
         .task-row.editing .edit-fields {
@@ -363,33 +377,33 @@
             display: none;
         }
         .task-row .edit-fields input {
-            padding: 12px 14px;
+            padding: 10px 12px;
             border-radius: 10px;
             border: 1px solid #334155;
             background: #0f172a;
             color: #f1f5f9;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
-            min-width: 100px;
+            min-width: 80px;
         }
         .task-row .edit-fields input:focus {
             outline: 2px solid #38bdf8;
             border-color: transparent;
         }
         .task-row .edit-fields input[type="time"] {
-            flex: 0.7;
-            min-width: 80px;
+            flex: 0.6;
+            min-width: 70px;
         }
 
         .conflict-warning {
             background: #7f1d1d;
             color: #fca5a5;
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 10px;
-            font-size: 0.85rem;
-            margin: 8px 0;
+            font-size: 0.8rem;
+            margin: 6px 0;
             display: none;
             border-left: 4px solid #f87171;
         }
@@ -400,18 +414,18 @@
         .empty-state {
             color: #64748b;
             text-align: center;
-            padding: 40px 0;
+            padding: 30px 0;
             font-style: italic;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         #statusMessage {
-            margin-top: 12px;
-            padding: 12px 16px;
+            margin-top: 10px;
+            padding: 10px 14px;
             background: #1e293b;
             border-radius: 12px;
             color: #cbd5e1;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border-left: 4px solid #38bdf8;
             line-height: 1.5;
         }
@@ -424,54 +438,187 @@
             font-weight: 600;
         }
 
+        /* Modal for "Maybe Later" list */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #334155;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2d3a4f;
+            margin-bottom: 12px;
+        }
+        .modal-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .modal-header .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 8px;
+        }
+        .modal-header .close-btn:active {
+            color: #f1f5f9;
+        }
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .modal-body .maybe-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: #0f172a;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            border-left: 3px solid #7c3aed;
+        }
+        .modal-body .maybe-item .item-text {
+            font-size: 0.95rem;
+            flex: 1;
+        }
+        .modal-body .maybe-item .item-actions button {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            touch-action: manipulation;
+        }
+        .modal-body .maybe-item .item-actions .delete-maybe:active {
+            color: #f87171;
+        }
+        .modal-body .maybe-item .item-actions .add-to-task:active {
+            color: #4ade80;
+        }
+        .modal-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #2d3a4f;
+        }
+        .modal-input-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .modal-input-row input:focus {
+            outline: 2px solid #7c3aed;
+            border-color: transparent;
+        }
+        .modal-input-row button {
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: none;
+            background: #7c3aed;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .modal-input-row button:active {
+            background: #a78bfa;
+            transform: scale(0.96);
+        }
+        .empty-maybe {
+            color: #64748b;
+            text-align: center;
+            padding: 20px 0;
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
         @media (max-width: 420px) {
             .stats-grid {
                 grid-template-columns: 1fr 1fr 1fr;
-                padding: 10px;
-                gap: 6px;
+                padding: 8px;
+                gap: 4px;
             }
             .stats-grid .stat-item .value {
-                font-size: 0.95rem;
+                font-size: 0.85rem;
+            }
+            .stats-grid .stat-item .label {
+                font-size: 0.5rem;
             }
             .input-section input[type="time"] {
-                width: 100px;
-                padding: 12px 8px;
-                font-size: 0.85rem;
+                width: 85px;
+                padding: 10px 6px;
+                font-size: 0.8rem;
             }
             .input-section input[type="text"] {
-                font-size: 0.85rem;
-                padding: 12px 12px;
+                font-size: 0.8rem;
+                padding: 10px 10px;
             }
             .input-section button {
-                font-size: 0.8rem;
-                padding: 12px 14px;
+                font-size: 0.75rem;
+                padding: 10px 12px;
+                min-width: 60px;
             }
             .task-row .task-name {
-                font-size: 0.9rem;
+                font-size: 0.85rem;
             }
             .task-row .task-actions button {
-                padding: 8px 12px;
-                font-size: 0.7rem;
-                min-width: 50px;
+                padding: 6px 10px;
+                font-size: 0.65rem;
+                min-width: 40px;
             }
             h1 {
-                font-size: 1.3rem;
+                font-size: 1.1rem;
             }
             .live-clock {
-                font-size: 1rem;
-                padding: 4px 12px;
+                font-size: 0.9rem;
+                padding: 4px 10px;
+            }
+            .top-actions button {
+                font-size: 0.7rem;
+                padding: 8px 12px;
+            }
+            .modal {
+                padding: 16px;
             }
         }
-
-        @media (max-width: 360px) {
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .input-section input[type="time"] {
-                width: 80px;
-            }
-        }
-
         button,
         input {
             touch-action: manipulation;
@@ -481,10 +628,18 @@
 <body>
     <div class="container">
         <h1>
-            <span>⏳ Honesty</span>
+            <span class="title">⏳ Honesty Pro</span>
             <span class="live-clock" id="liveClock">00:00:00</span>
         </h1>
 
+        <!-- Top Actions -->
+        <div class="top-actions">
+            <button class="export-btn" onclick="exportCSV()">📊 Export Excel</button>
+            <button class="maybe-btn" onclick="toggleModal(true)">📝 Maybe Later</button>
+            <button class="export-btn" style="background:#dc2626;" onclick="testAlarm()">🔔 Test</button>
+        </div>
+
+        <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-item">
                 <span class="label">📋 Tasks</span>
@@ -507,8 +662,8 @@
                 <span class="value warning" id="currentTaskDisplay">None</span>
             </div>
             <div class="stat-item">
-                <span class="label">🔊 Test</span>
-                <button id="testAlarmBtn" style="background:#7c3aed;color:#fff;border:none;padding:6px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;cursor:pointer;touch-action:manipulation;width:100%;">🔔 Test</button>
+                <span class="label">📅 Date</span>
+                <span class="value" id="dateDisplay" style="font-size:0.8rem;">---</span>
             </div>
         </div>
 
@@ -531,15 +686,35 @@
         <div id="statusMessage">🔔 Ready. Add tasks, tap <span class="highlight">Start</span> to begin tracking.</div>
     </div>
 
+    <!-- Modal for "Maybe Later" -->
+    <div class="modal-overlay" id="maybeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📝 Maybe Later List</h2>
+                <button class="close-btn" onclick="toggleModal(false)">✕</button>
+            </div>
+            <div class="modal-body" id="maybeListContainer">
+                <div class="empty-maybe">No items. Add things you might do later.</div>
+            </div>
+            <div class="modal-input-row">
+                <input type="text" id="maybeInput" placeholder="e.g. Go swimming">
+                <button onclick="addMaybeItem()">➕ Add</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ---------- CORE DATA ----------
         let tasks = [];
+        let maybeItems = [];
         let activeTaskId = null;
         let alarmInterval = null;
         let secondTimer = null;
         let audioCtx = null;
         let editingTaskId = null;
+        let currentDate = new Date().toDateString();
 
+        // DOM refs
         const grid = document.getElementById('timelineGrid');
         const liveClock = document.getElementById('liveClock');
         const totalTasksSpan = document.getElementById('totalTasks');
@@ -549,8 +724,9 @@
         const currentTaskDisplay = document.getElementById('currentTaskDisplay');
         const statusMsg = document.getElementById('statusMessage');
         const conflictWarning = document.getElementById('conflictWarning');
+        const dateDisplay = document.getElementById('dateDisplay');
 
-        // ---------- AUDIO ----------
+        // ---------- AUDIO + VIBRATION (Silent mode bypass) ----------
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new(window.AudioContext || window.webkitAudioContext)();
@@ -562,6 +738,7 @@
         }
 
         function playBeep(frequency = 800, duration = 300, times = 1, delay = 400) {
+            // Try audio first
             try {
                 const ctx = initAudio();
                 let count = 0;
@@ -574,7 +751,7 @@
                     gain.connect(ctx.destination);
                     osc.frequency.value = frequency;
                     osc.type = 'sine';
-                    gain.gain.value = 0.25;
+                    gain.gain.value = 0.3;
                     osc.start();
                     osc.stop(ctx.currentTime + duration / 1000);
                     count++;
@@ -585,30 +762,41 @@
                 beep();
             } catch (e) {
                 console.log('Audio error:', e);
-                audioCtx = null;
-                setTimeout(() => {
-                    try {
-                        const ctx2 = initAudio();
-                        const osc = ctx2.createOscillator();
-                        const gain = ctx2.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx2.destination);
-                        osc.frequency.value = frequency;
-                        osc.type = 'sine';
-                        gain.gain.value = 0.2;
-                        osc.start();
-                        osc.stop(ctx2.currentTime + duration / 1000);
-                    } catch (e2) { console.log('Fallback audio failed'); }
-                }, 100);
+            }
+
+            // ALWAYS vibrate as backup (works in silent mode)
+            if (navigator.vibrate) {
+                const pattern = [];
+                for (let i = 0; i < times; i++) {
+                    pattern.push(duration);
+                    if (i < times - 1) pattern.push(delay - 100);
+                }
+                navigator.vibrate(pattern);
+            }
+
+            // Visual flash for silent mode
+            const body = document.body;
+            body.style.transition = 'background 0.1s';
+            body.style.background = '#7f1d1d';
+            setTimeout(() => { body.style.background = '#0b1120'; }, 200);
+            if (times > 1) {
+                setTimeout(() => { body.style.background = '#7f1d1d'; }, 400);
+                setTimeout(() => { body.style.background = '#0b1120'; }, 600);
             }
         }
 
-        document.getElementById('testAlarmBtn').addEventListener('click', function(e) {
-            e.preventDefault();
+        function testAlarm() {
             initAudio();
             playBeep(880, 300, 3, 300);
-            statusMsg.innerHTML = '🔊 <span class="highlight">Alarm test!</span> You should hear 3 beeps.';
-        });
+            statusMsg.innerHTML = '🔊 <span class="highlight">Alarm test!</span> You should hear 3 beeps + vibration + flash.';
+            // Also flash the status message
+            const msg = document.getElementById('statusMessage');
+            msg.style.transition = 'background 0.1s';
+            msg.style.background = '#7f1d1d';
+            setTimeout(() => { msg.style.background = '#1e293b'; }, 300);
+            setTimeout(() => { msg.style.background = '#7f1d1d'; }, 600);
+            setTimeout(() => { msg.style.background = '#1e293b'; }, 900);
+        }
 
         // ---------- TIME HELPERS ----------
         function timeToMinutes(timeStr) {
@@ -633,6 +821,52 @@
         function getCurrentMinutes() {
             const now = new Date();
             return now.getHours() * 60 + now.getMinutes();
+        }
+
+        function isNewDay() {
+            const today = new Date().toDateString();
+            if (today !== currentDate) {
+                currentDate = today;
+                return true;
+            }
+            return false;
+        }
+
+        // ---------- AUTO-RESET AT MIDNIGHT ----------
+        function checkMidnightReset() {
+            if (isNewDay()) {
+                // Archive old tasks to localStorage
+                if (tasks.length > 0) {
+                    const archive = {
+                        date: currentDate,
+                        tasks: tasks.map(t => ({
+                            name: t.name,
+                            start: t.start,
+                            end: t.end,
+                            actualMinutes: getActualMinutes(t),
+                            plannedMinutes: timeToMinutes(t.end) - timeToMinutes(t.start),
+                        }))
+                    };
+                    try {
+                        let history = JSON.parse(localStorage.getItem('history24') || '[]');
+                        history.push(archive);
+                        if (history.length > 30) history = history.slice(-30);
+                        localStorage.setItem('history24', JSON.stringify(history));
+                    } catch (e) {}
+                }
+
+                // Clear tasks
+                tasks = [];
+                activeTaskId = null;
+                editingTaskId = null;
+                if (alarmInterval) clearInterval(alarmInterval);
+                if (secondTimer) clearInterval(secondTimer);
+                secondTimer = null;
+                render();
+                saveToLocal();
+                statusMsg.innerHTML = '🌅 <span class="highlight">New day!</span> Tasks reset. Yesterday\'s data saved.';
+                playBeep(600, 200, 2);
+            }
         }
 
         // ---------- CONFLICT CHECK ----------
@@ -695,7 +929,6 @@
 
         // ---------- EDIT TASK ----------
         function startEdit(id) {
-            // If another task is being edited, cancel it first
             if (editingTaskId && editingTaskId !== id) {
                 cancelEdit(editingTaskId);
             }
@@ -728,7 +961,6 @@
             if (!newName) { alert('Task name cannot be empty'); return; }
             if (newStart >= newEnd) { alert('End time must be after start time'); return; }
 
-            // Check for conflicts (excluding this task)
             if (hasConflict(newStart, newEnd, id)) {
                 conflictWarning.classList.add('show');
                 setTimeout(() => conflictWarning.classList.remove('show'), 3000);
@@ -738,7 +970,6 @@
             }
             conflictWarning.classList.remove('show');
 
-            // If task was active, stop it first (can't change times while running)
             if (task.isActive) {
                 stopTask(id);
             }
@@ -761,7 +992,6 @@
             if (!task) return;
             if (task.isActive) return;
 
-            // If editing, cancel edit
             if (editingTaskId) {
                 cancelEdit(editingTaskId);
             }
@@ -787,7 +1017,10 @@
             checkAlarms();
 
             if (secondTimer) clearInterval(secondTimer);
-            secondTimer = setInterval(() => { render(); }, 1000);
+            secondTimer = setInterval(() => {
+                render();
+                checkMidnightReset();
+            }, 1000);
 
             render();
             saveToLocal();
@@ -835,7 +1068,7 @@
             tasks.forEach(task => {
                 if (!task.isActive) return;
                 if (currentTime >= task.end) {
-                    initAudio();
+                    // Alarm with vibration + flash (silent mode friendly)
                     playBeep(1000, 400, 3, 350);
 
                     const elapsed = getActualMinutes(task);
@@ -864,6 +1097,19 @@
                 }
             });
         }
+
+        // ---------- BACKGROUND TRACKING (Page Visibility) ----------
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // App went to background - we keep tracking via timer
+                console.log('App in background, timer still running');
+            } else {
+                // App came back - update UI immediately
+                render();
+                // Check if any active task should have finished while away
+                checkAlarms();
+            }
+        });
 
         // ---------- RENDER ----------
         function render() {
@@ -899,7 +1145,6 @@
 
                 html += `
                     <div class="task-row ${isActive ? 'active' : ''} ${isEditing ? 'editing' : ''}" data-task-id="${task.id}">
-                        <!-- Normal view -->
                         <div class="task-top">
                             <span class="task-time">${task.start}—${task.end}</span>
                             <span class="task-name">${task.name}</span>
@@ -916,14 +1161,12 @@
                             <span class="percent" style="color: ${percentColor};">${Math.round(percent)}% done</span>
                         </div>
 
-                        <!-- Edit fields -->
                         <div class="edit-fields">
                             <input type="text" class="edit-name" value="${task.name}" placeholder="Task name">
                             <input type="time" class="edit-start" value="${task.start}">
                             <input type="time" class="edit-end" value="${task.end}">
                         </div>
 
-                        <!-- Actions -->
                         <div class="task-actions">
                             ${isEditing ? `
                                 <button class="save-edit-btn" onclick="saveEdit('${task.id}')">💾 Save</button>
@@ -941,8 +1184,8 @@
 
             grid.innerHTML = html;
             updateCurrentTask();
+            dateDisplay.innerText = new Date().toLocaleDateString();
 
-            // If editing, focus the name input
             if (editingTaskId) {
                 const row = document.querySelector(`[data-task-id="${editingTaskId}"]`);
                 if (row) {
@@ -981,6 +1224,134 @@
             currentTaskDisplay.innerText = active ? active.name : 'None';
         }
 
+        // ---------- EXPORT TO EXCEL (CSV) ----------
+        function exportCSV() {
+            if (tasks.length === 0) {
+                statusMsg.innerHTML = '⚠️ No tasks to export. Add some tasks first!';
+                return;
+            }
+
+            let csv = 'Task,Start,End,Planned (min),Actual (min),Lost (min),Completion %\n';
+            tasks.forEach(t => {
+                const planned = timeToMinutes(t.end) - timeToMinutes(t.start);
+                const actual = getActualMinutes(t);
+                const lost = Math.max(0, planned - actual);
+                const pct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+                csv +=
+                    `"${t.name}",${t.start},${t.end},${planned},${actual},${lost},${pct}%\n`;
+            });
+
+            // Add summary row
+            let totalPlanned = 0,
+                totalActual = 0;
+            tasks.forEach(t => {
+                totalPlanned += timeToMinutes(t.end) - timeToMinutes(t.start);
+                totalActual += getActualMinutes(t);
+            });
+            const totalLost = Math.max(0, totalPlanned - totalActual);
+            csv += `\n"TOTAL","","",${totalPlanned},${totalActual},${totalLost},${totalPlanned > 0 ? Math.round((totalActual/totalPlanned)*100) : 0}%\n`;
+
+            // Add date
+            csv += `\n"Exported on: ${new Date().toLocaleString()}"\n`;
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `productivity_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            statusMsg.innerHTML = '📊 <span class="highlight">Exported!</span> CSV file downloaded. Open in Excel.';
+        }
+
+        // ---------- "MAYBE LATER" LIST ----------
+        function toggleModal(show) {
+            const modal = document.getElementById('maybeModal');
+            if (show) {
+                modal.classList.add('show');
+                renderMaybeList();
+                document.getElementById('maybeInput').focus();
+            } else {
+                modal.classList.remove('show');
+            }
+        }
+
+        function addMaybeItem() {
+            const input = document.getElementById('maybeInput');
+            const text = input.value.trim();
+            if (!text) return;
+            maybeItems.push({ id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4), text: text });
+            input.value = '';
+            saveMaybeToLocal();
+            renderMaybeList();
+        }
+
+        function deleteMaybeItem(id) {
+            maybeItems = maybeItems.filter(item => item.id !== id);
+            saveMaybeToLocal();
+            renderMaybeList();
+        }
+
+        function addMaybeToTask(id) {
+            const item = maybeItems.find(i => i.id === id);
+            if (!item) return;
+            // Pre-fill the add form with this item
+            document.getElementById('taskName').value = item.text;
+            // Auto-set times to current hour + 1 hour
+            const now = new Date();
+            const startH = String(now.getHours()).padStart(2, '0');
+            const startM = String(now.getMinutes()).padStart(2, '0');
+            const endH = String(now.getHours() + 1).padStart(2, '0');
+            document.getElementById('startTime').value = `${startH}:${startM}`;
+            document.getElementById('endTime').value = `${endH}:${startM}`;
+            // Remove from maybe list
+            deleteMaybeItem(id);
+            toggleModal(false);
+            statusMsg.innerHTML = `📝 Moved "${item.text}" to task form. Click Add to schedule it.`;
+            // Focus the add button
+            document.getElementById('addTaskBtn').focus();
+        }
+
+        function renderMaybeList() {
+            const container = document.getElementById('maybeListContainer');
+            if (maybeItems.length === 0) {
+                container.innerHTML = `<div class="empty-maybe">No items. Add things you might do later.</div>`;
+                return;
+            }
+            let html = '';
+            maybeItems.forEach(item => {
+                html += `
+                    <div class="maybe-item">
+                        <span class="item-text">${item.text}</span>
+                        <div class="item-actions">
+                            <button class="add-to-task" onclick="addMaybeToTask('${item.id}')" title="Add to schedule">📋</button>
+                            <button class="delete-maybe" onclick="deleteMaybeItem('${item.id}')" title="Delete">✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function saveMaybeToLocal() {
+            try {
+                localStorage.setItem('maybeItems', JSON.stringify(maybeItems));
+            } catch (e) {}
+        }
+
+        function loadMaybeFromLocal() {
+            try {
+                const data = localStorage.getItem('maybeItems');
+                if (data) {
+                    maybeItems = JSON.parse(data);
+                }
+            } catch (e) {}
+        }
+
         // ---------- STORAGE ----------
         function saveToLocal() {
             try {
@@ -994,6 +1365,7 @@
                     completed: t.completed || false,
                 }));
                 localStorage.setItem('tasks24', JSON.stringify(data));
+                localStorage.setItem('currentDate', currentDate);
             } catch (e) {}
         }
 
@@ -1009,6 +1381,14 @@
                     }));
                     activeTaskId = null;
                     render();
+                }
+                const savedDate = localStorage.getItem('currentDate');
+                if (savedDate) {
+                    currentDate = savedDate;
+                    if (isNewDay()) {
+                        // If it's a new day, clear tasks (already handled in checkMidnightReset)
+                        checkMidnightReset();
+                    }
                 }
             } catch (e) {}
         }
@@ -1046,6 +1426,16 @@
             }
         });
 
+        // Enter key on maybe input
+        document.getElementById('maybeInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addMaybeItem();
+        });
+
+        // Close modal on overlay click
+        document.getElementById('maybeModal').addEventListener('click', function(e) {
+            if (e.target === this) toggleModal(false);
+        });
+
         document.querySelectorAll('.input-section input').forEach(inp => {
             inp.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') document.getElementById('addTaskBtn').click();
@@ -1053,17 +1443,20 @@
         });
 
         // ---------- INIT ----------
+        loadMaybeFromLocal();
         loadFromLocal();
         updateClock();
         setInterval(updateClock, 1000);
         setInterval(checkAlarms, 10000);
+        setInterval(checkMidnightReset, 30000);
 
+        // Initialize audio on first touch
         document.addEventListener('touchstart', function initAudioOnTouch() {
             initAudio();
             document.removeEventListener('touchstart', initAudioOnTouch);
         }, { once: true });
 
-        console.log('✅ iPhone Honesty Dashboard loaded with inline editing.');
+        console.log('✅ Honesty Pro loaded with silent mode bypass, background tracking, export, and maybe list.');
     </script>
 </body>
 </html>
