@@ -704,6 +704,19 @@
     </div>
 
     <script>
+        // ---------- CONFIG ----------
+        // Local save works immediately. Email automation needs the Google Apps Script URL.
+        const REPORT_EMAIL = 'da.umeshh@gmail.com';
+        const REPORT_API_TOKEN = 'ww2AL52EEFJtIplNNmE1s3DUZG2kLt91';
+        const REPORT_WEB_APP_URL = ''; // Paste your deployed Apps Script /exec URL here.
+        const ENABLE_CLOUD_SYNC = false; // Change to true after REPORT_WEB_APP_URL is added.
+
+        const LOCAL_TASKS_KEY = 'honestyProTasksV2';
+        const LEGACY_TASKS_KEY = 'tasks24';
+        const LOCAL_DATE_KEY = 'honestyProDateKey';
+        const LEGACY_DATE_KEY = 'currentDate';
+        const HISTORY_KEY = 'history24';
+
         // ---------- CORE DATA ----------
         let tasks = [];
         let maybeItems = [];
@@ -712,7 +725,8 @@
         let secondTimer = null;
         let audioCtx = null;
         let editingTaskId = null;
-        let currentDate = new Date().toDateString();
+        let currentDateKey = getDateKey();
+        let lastCloudSyncMs = 0;
 
         // DOM refs
         const grid = document.getElementById('timelineGrid');
@@ -726,7 +740,18 @@
         const conflictWarning = document.getElementById('conflictWarning');
         const dateDisplay = document.getElementById('dateDisplay');
 
-        // ---------- AUDIO + VIBRATION (Silent mode bypass) ----------
+        // ---------- SAFE TEXT HELPERS ----------
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function createTaskId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+        }
+
+        // ---------- AUDIO + VIBRATION ----------
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new(window.AudioContext || window.webkitAudioContext)();
@@ -738,7 +763,6 @@
         }
 
         function playBeep(frequency = 800, duration = 300, times = 1, delay = 400) {
-            // Try audio first
             try {
                 const ctx = initAudio();
                 let count = 0;
@@ -764,17 +788,15 @@
                 console.log('Audio error:', e);
             }
 
-            // ALWAYS vibrate as backup (works in silent mode)
             if (navigator.vibrate) {
                 const pattern = [];
                 for (let i = 0; i < times; i++) {
                     pattern.push(duration);
-                    if (i < times - 1) pattern.push(delay - 100);
+                    if (i < times - 1) pattern.push(Math.max(50, delay - 100));
                 }
                 navigator.vibrate(pattern);
             }
 
-            // Visual flash for silent mode
             const body = document.body;
             body.style.transition = 'background 0.1s';
             body.style.background = '#7f1d1d';
@@ -789,25 +811,52 @@
             initAudio();
             playBeep(880, 300, 3, 300);
             statusMsg.innerHTML = '🔊 <span class="highlight">Alarm test!</span> You should hear 3 beeps + vibration + flash.';
-            // Also flash the status message
-            const msg = document.getElementById('statusMessage');
-            msg.style.transition = 'background 0.1s';
-            msg.style.background = '#7f1d1d';
-            setTimeout(() => { msg.style.background = '#1e293b'; }, 300);
-            setTimeout(() => { msg.style.background = '#7f1d1d'; }, 600);
-            setTimeout(() => { msg.style.background = '#1e293b'; }, 900);
+            statusMsg.style.transition = 'background 0.1s';
+            statusMsg.style.background = '#7f1d1d';
+            setTimeout(() => { statusMsg.style.background = '#1e293b'; }, 300);
+            setTimeout(() => { statusMsg.style.background = '#7f1d1d'; }, 600);
+            setTimeout(() => { statusMsg.style.background = '#1e293b'; }, 900);
         }
 
         // ---------- TIME HELPERS ----------
+        function getDateKey(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function normalizeDateKey(value) {
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+            if (value) {
+                const parsed = new Date(value);
+                if (!Number.isNaN(parsed.getTime())) return getDateKey(parsed);
+            }
+            return getDateKey();
+        }
+
+        function dateFromKey(dateKey) {
+            const [y, m, d] = String(dateKey).split('-').map(Number);
+            return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+        }
+
+        function nextMidnightMs(dateKey = currentDateKey) {
+            const d = dateFromKey(dateKey);
+            d.setDate(d.getDate() + 1);
+            return d.getTime();
+        }
+
         function timeToMinutes(timeStr) {
+            if (!/^\d{2}:\d{2}$/.test(String(timeStr || ''))) return 0;
             const [h, m] = timeStr.split(':').map(Number);
             return h * 60 + m;
         }
 
         function minutesToStr(min) {
-            if (min < 0) min = 0;
-            const h = Math.floor(min / 60);
-            const m = Math.round(min % 60);
+            if (!Number.isFinite(min) || min < 0) min = 0;
+            const rounded = Math.round(min);
+            const h = Math.floor(rounded / 60);
+            const m = rounded % 60;
             if (h === 0) return `${m}m`;
             if (m === 0) return `${h}h`;
             return `${h}h ${m}m`;
@@ -823,49 +872,146 @@
             return now.getHours() * 60 + now.getMinutes();
         }
 
-        function isNewDay() {
-            const today = new Date().toDateString();
-            if (today !== currentDate) {
-                currentDate = today;
-                return true;
-            }
-            return false;
+        function scheduledTimeMs(dateKey, timeStr) {
+            const [h, m] = String(timeStr || '00:00').split(':').map(Number);
+            const d = dateFromKey(dateKey);
+            d.setHours(h || 0, m || 0, 0, 0);
+            return d.getTime();
         }
 
-        // ---------- AUTO-RESET AT MIDNIGHT ----------
-        function checkMidnightReset() {
-            if (isNewDay()) {
-                // Archive old tasks to localStorage
-                if (tasks.length > 0) {
-                    const archive = {
-                        date: currentDate,
-                        tasks: tasks.map(t => ({
-                            name: t.name,
-                            start: t.start,
-                            end: t.end,
-                            actualMinutes: getActualMinutes(t),
-                            plannedMinutes: timeToMinutes(t.end) - timeToMinutes(t.start),
-                        }))
-                    };
-                    try {
-                        let history = JSON.parse(localStorage.getItem('history24') || '[]');
-                        history.push(archive);
-                        if (history.length > 30) history = history.slice(-30);
-                        localStorage.setItem('history24', JSON.stringify(history));
-                    } catch (e) {}
-                }
+        function taskEndMsForDate(task, dateKey = currentDateKey) {
+            return scheduledTimeMs(dateKey, task.end);
+        }
 
-                // Clear tasks
-                tasks = [];
-                activeTaskId = null;
-                editingTaskId = null;
-                if (alarmInterval) clearInterval(alarmInterval);
-                if (secondTimer) clearInterval(secondTimer);
-                secondTimer = null;
-                render();
-                saveToLocal();
-                statusMsg.innerHTML = '🌅 <span class="highlight">New day!</span> Tasks reset. Yesterday\'s data saved.';
-                playBeep(600, 200, 2);
+        function plannedMinutesOf(task) {
+            return Math.max(0, timeToMinutes(task.end) - timeToMinutes(task.start));
+        }
+
+        function baseActualMs(task) {
+            const fromMs = Number(task.actualMs);
+            if (Number.isFinite(fromMs)) return Math.max(0, fromMs);
+            const fromMinutes = Number(task.actualMinutes || 0);
+            return Math.max(0, fromMinutes * 60000);
+        }
+
+        function getActualMs(task, capMs = Date.now(), dateKey = currentDateKey) {
+            let total = baseActualMs(task);
+            if (task.isActive && task.startedAtMs) {
+                const sessionStart = Number(task.startedAtMs);
+                const endCap = Math.min(capMs, taskEndMsForDate(task, dateKey), nextMidnightMs(dateKey));
+                const elapsed = endCap - sessionStart;
+                if (elapsed > 0) total += elapsed;
+            }
+            return Math.max(0, total);
+        }
+
+        function getActualMinutes(task, capMs = Date.now(), dateKey = currentDateKey) {
+            return Math.round(getActualMs(task, capMs, dateKey) / 60000);
+        }
+
+        function finalizeElapsedForTask(task, capMs = Date.now(), dateKey = currentDateKey) {
+            const actualMs = getActualMs(task, capMs, dateKey);
+            task.actualMs = actualMs;
+            task.actualMinutes = Math.round(actualMs / 60000);
+            task.isActive = false;
+            task.startedAtMs = null;
+            if (activeTaskId === task.id) activeTaskId = null;
+        }
+
+        // ---------- AUTO-RESET + REPORT AT MIDNIGHT ----------
+        function checkMidnightReset() {
+            const todayKey = getDateKey();
+            if (todayKey !== currentDateKey) {
+                finalizeAndResetForNewDay(todayKey, 'midnight_reset');
+            }
+        }
+
+        function freezeTaskForReport(task, dateKey, cutoffMs) {
+            const actualMs = getActualMs(task, cutoffMs, dateKey);
+            const plannedMinutes = plannedMinutesOf(task);
+            return {
+                id: task.id,
+                name: task.name,
+                start: task.start,
+                end: task.end,
+                plannedMinutes,
+                actualMs,
+                actualMinutes: Math.round(actualMs / 60000),
+                lostMinutes: Math.max(0, plannedMinutes - Math.round(actualMs / 60000)),
+                isFinished: !!task.isFinished,
+                completed: !!task.completed,
+                isActive: false,
+                startedAtMs: null
+            };
+        }
+
+        function buildSummary(reportTasks) {
+            let planned = 0;
+            let actual = 0;
+            reportTasks.forEach(t => {
+                planned += Number.isFinite(Number(t.plannedMinutes)) ? Number(t.plannedMinutes) : plannedMinutesOf(t);
+                actual += Number.isFinite(Number(t.actualMinutes)) ? Number(t.actualMinutes) : getActualMinutes(t);
+            });
+            const lost = Math.max(0, planned - actual);
+            return {
+                totalTasks: reportTasks.length,
+                totalPlannedMinutes: planned,
+                totalActualMinutes: actual,
+                totalLostMinutes: lost,
+                completionPercent: planned > 0 ? Math.round((actual / planned) * 100) : 0
+            };
+        }
+
+        function makeReport(dateKey, cutoffMs, reason) {
+            const reportTasks = tasks.map(t => freezeTaskForReport(t, dateKey, cutoffMs));
+            return {
+                type: 'report',
+                app: 'Honesty Timer Pro',
+                recipient: REPORT_EMAIL,
+                token: REPORT_API_TOKEN,
+                dateKey,
+                reason,
+                createdAt: new Date().toISOString(),
+                createdAtMs: Date.now(),
+                tasks: reportTasks,
+                summary: buildSummary(reportTasks),
+                csv: buildCSV(reportTasks, dateKey)
+            };
+        }
+
+        function finalizeAndResetForNewDay(todayKey = getDateKey(), reason = 'new_day') {
+            const oldDateKey = currentDateKey;
+            const cutoffMs = nextMidnightMs(oldDateKey);
+
+            if (tasks.length > 0) {
+                const report = makeReport(oldDateKey, cutoffMs, reason);
+                saveReportToLocalHistory(report);
+                postToReportServer(report, true);
+            }
+
+            tasks = [];
+            activeTaskId = null;
+            editingTaskId = null;
+            currentDateKey = todayKey;
+            if (alarmInterval) clearInterval(alarmInterval);
+            if (secondTimer) clearInterval(secondTimer);
+            alarmInterval = null;
+            secondTimer = null;
+            render();
+            saveToLocal('new_day_reset', true);
+            statusMsg.innerHTML = '🌅 <span class="highlight">New day!</span> Yesterday\'s data was saved and the task list was reset.';
+            playBeep(600, 200, 2);
+        }
+
+        function saveReportToLocalHistory(report) {
+            try {
+                let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                history.push(report);
+                if (history.length > 30) history = history.slice(-30);
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                localStorage.setItem('lastHonestyReportDateKey', report.dateKey);
+            } catch (e) {
+                console.log('Could not save local report history:', e);
             }
         }
 
@@ -883,6 +1029,7 @@
 
         // ---------- TASK CRUD ----------
         function addTask(name, start, end) {
+            checkMidnightReset();
             if (!name.trim()) { alert('Enter a task name'); return; }
             if (start >= end) { alert('End time must be after start time'); return; }
 
@@ -896,34 +1043,34 @@
             conflictWarning.classList.remove('show');
 
             const task = {
-                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+                id: createTaskId(),
                 name: name.trim(),
-                start: start,
-                end: end,
+                start,
+                end,
                 isActive: false,
                 isFinished: false,
+                actualMs: 0,
                 actualMinutes: 0,
-                startTimeTrack: null,
+                startedAtMs: null,
                 completed: false
             };
             tasks.push(task);
             tasks.sort((a, b) => a.start.localeCompare(b.start));
             render();
-            saveToLocal();
-            statusMsg.innerHTML = `✅ Added "${task.name}" ${start}—${end}`;
+            saveToLocal('task_added');
+            statusMsg.innerHTML = `✅ Added "${escapeHtml(task.name)}" ${start}—${end}`;
             playBeep(600, 150, 1);
         }
 
         function deleteTask(id) {
             const task = tasks.find(t => t.id === id);
             if (task && task.isActive) {
-                task.isActive = false;
-                if (activeTaskId === id) activeTaskId = null;
+                finalizeElapsedForTask(task);
             }
             tasks = tasks.filter(t => t.id !== id);
             if (editingTaskId === id) editingTaskId = null;
             render();
-            saveToLocal();
+            saveToLocal('task_deleted');
             statusMsg.innerHTML = '🗑️ Task removed.';
         }
 
@@ -971,7 +1118,7 @@
             conflictWarning.classList.remove('show');
 
             if (task.isActive) {
-                stopTask(id);
+                finalizeElapsedForTask(task);
             }
 
             task.name = newName;
@@ -981,13 +1128,14 @@
             tasks.sort((a, b) => a.start.localeCompare(b.start));
             editingTaskId = null;
             render();
-            saveToLocal();
-            statusMsg.innerHTML = `✏️ Updated "${task.name}" to ${task.start}—${task.end}`;
+            saveToLocal('task_edited');
+            statusMsg.innerHTML = `✏️ Updated "${escapeHtml(task.name)}" to ${task.start}—${task.end}`;
             playBeep(500, 150, 1);
         }
 
         // ---------- START / STOP ----------
         function startTask(id) {
+            checkMidnightReset();
             const task = tasks.find(t => t.id === id);
             if (!task) return;
             if (task.isActive) return;
@@ -998,7 +1146,7 @@
 
             tasks.forEach(t => {
                 if (t.isActive && t.id !== id) {
-                    stopTask(t.id);
+                    finalizeElapsedForTask(t);
                 }
             });
 
@@ -1007,76 +1155,49 @@
             task.isActive = true;
             task.isFinished = false;
             activeTaskId = id;
-            task.startTimeTrack = getCurrentMinutes();
+            task.startedAtMs = Date.now();
 
             playBeep(880, 200, 2);
-            statusMsg.innerHTML = `🔔 <span class="highlight">STARTED</span> "${task.name}" at ${task.start}`;
+            statusMsg.innerHTML = `🔔 <span class="highlight">STARTED</span> "${escapeHtml(task.name)}" at ${getCurrentTimeStr()}`;
 
             if (alarmInterval) clearInterval(alarmInterval);
             alarmInterval = setInterval(checkAlarms, 5000);
             checkAlarms();
-
-            if (secondTimer) clearInterval(secondTimer);
-            secondTimer = setInterval(() => {
-                render();
-                checkMidnightReset();
-            }, 1000);
+            ensureSecondTimer();
 
             render();
-            saveToLocal();
+            saveToLocal('task_started', true);
         }
 
         function stopTask(id) {
             const task = tasks.find(t => t.id === id);
             if (!task) return;
 
-            if (task.isActive && task.startTimeTrack !== null) {
-                const now = getCurrentMinutes();
-                const elapsed = now - task.startTimeTrack;
-                if (elapsed > 0) {
-                    task.actualMinutes += elapsed;
-                }
-                task.startTimeTrack = null;
-            }
-
-            task.isActive = false;
-            if (activeTaskId === id) activeTaskId = null;
-
-            if (!tasks.some(t => t.isActive)) {
-                if (secondTimer) clearInterval(secondTimer);
-                secondTimer = null;
+            if (task.isActive) {
+                finalizeElapsedForTask(task);
             }
 
             render();
-            saveToLocal();
-            statusMsg.innerHTML = `⏹️ Stopped "${task.name}"`;
-        }
-
-        function getActualMinutes(task) {
-            let total = task.actualMinutes || 0;
-            if (task.isActive && task.startTimeTrack !== null) {
-                const now = getCurrentMinutes();
-                const elapsed = now - task.startTimeTrack;
-                if (elapsed > 0) total += elapsed;
-            }
-            return total;
+            saveToLocal('task_stopped', true);
+            statusMsg.innerHTML = `⏹️ Stopped "${escapeHtml(task.name)}"`;
+            ensureSecondTimer();
         }
 
         // ---------- ALARM CHECKER ----------
         function checkAlarms() {
-            const currentTime = getCurrentTimeStr();
+            checkMidnightReset();
+            const now = Date.now();
+            let changed = false;
+
             tasks.forEach(task => {
                 if (!task.isActive) return;
-                if (currentTime >= task.end) {
-                    // Alarm with vibration + flash (silent mode friendly)
+                if (now >= taskEndMsForDate(task, currentDateKey)) {
                     playBeep(1000, 400, 3, 350);
 
-                    const elapsed = getActualMinutes(task);
-                    task.actualMinutes = elapsed;
-                    task.isActive = false;
+                    finalizeElapsedForTask(task, taskEndMsForDate(task, currentDateKey), currentDateKey);
                     task.isFinished = true;
-                    task.startTimeTrack = null;
                     activeTaskId = null;
+                    changed = true;
 
                     const row = document.querySelector(`[data-task-id="${task.id}"]`);
                     if (row) {
@@ -1085,31 +1206,46 @@
                     }
 
                     statusMsg.innerHTML =
-                        `🔔 <span class="danger">FINISHED</span> "${task.name}" at ${task.end}! Actual: <span class="highlight">${minutesToStr(task.actualMinutes)}</span>`;
-
-                    if (!tasks.some(t => t.isActive)) {
-                        if (secondTimer) clearInterval(secondTimer);
-                        secondTimer = null;
-                    }
-
-                    render();
-                    saveToLocal();
+                        `🔔 <span class="danger">FINISHED</span> "${escapeHtml(task.name)}" at ${task.end}! Actual: <span class="highlight">${minutesToStr(task.actualMinutes)}</span>`;
                 }
             });
+
+            if (changed) {
+                render();
+                saveToLocal('alarm_finished', true);
+            }
+            ensureSecondTimer();
         }
 
-        // ---------- BACKGROUND TRACKING (Page Visibility) ----------
+        function ensureSecondTimer() {
+            const hasActive = tasks.some(t => t.isActive);
+            if (hasActive && !secondTimer) {
+                secondTimer = setInterval(() => {
+                    render();
+                    checkAlarms();
+                    checkMidnightReset();
+                }, 1000);
+            }
+            if (!hasActive && secondTimer) {
+                clearInterval(secondTimer);
+                secondTimer = null;
+            }
+        }
+
+        // ---------- BACKGROUND / CLOSE HANDLING ----------
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // App went to background - we keep tracking via timer
-                console.log('App in background, timer still running');
+            if (document.visibilityState === 'hidden') {
+                saveToLocal('visibility_hidden', true);
             } else {
-                // App came back - update UI immediately
-                render();
-                // Check if any active task should have finished while away
+                checkMidnightReset();
                 checkAlarms();
+                render();
+                saveToLocal('visibility_visible');
             }
         });
+
+        window.addEventListener('pagehide', () => saveToLocal('pagehide', true));
+        window.addEventListener('beforeunload', () => saveToLocal('beforeunload', true));
 
         // ---------- RENDER ----------
         function render() {
@@ -1117,6 +1253,8 @@
 
             if (tasks.length === 0) {
                 grid.innerHTML = `<div class="empty-state">No tasks planned. Build your 24h schedule!</div>`;
+                updateCurrentTask();
+                dateDisplay.innerText = new Date().toLocaleDateString();
                 return;
             }
 
@@ -1124,30 +1262,31 @@
             tasks.forEach(task => {
                 const isActive = task.isActive;
                 const isEditing = (editingTaskId === task.id);
-                const plannedMin = timeToMinutes(task.end) - timeToMinutes(task.start);
+                const plannedMin = plannedMinutesOf(task);
                 const actualMin = getActualMinutes(task);
                 const lostMin = Math.max(0, plannedMin - actualMin);
                 const percent = plannedMin > 0 ? Math.min(100, (actualMin / plannedMin) * 100) : 0;
 
                 let progress = 0;
                 if (isActive) {
-                    const nowMin = getCurrentMinutes();
-                    const startMin = timeToMinutes(task.start);
-                    const endMin = timeToMinutes(task.end);
-                    const total = endMin - startMin;
-                    const elapsed = nowMin - startMin;
+                    const nowMs = Date.now();
+                    const startMs = scheduledTimeMs(currentDateKey, task.start);
+                    const endMs = taskEndMsForDate(task, currentDateKey);
+                    const total = endMs - startMs;
+                    const elapsed = nowMs - startMs;
                     progress = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
                 } else if (task.isFinished) {
                     progress = 100;
                 }
 
                 const percentColor = percent >= 80 ? '#4ade80' : percent >= 50 ? '#fbbf24' : '#f87171';
+                const safeName = escapeHtml(task.name);
 
                 html += `
                     <div class="task-row ${isActive ? 'active' : ''} ${isEditing ? 'editing' : ''}" data-task-id="${task.id}">
                         <div class="task-top">
                             <span class="task-time">${task.start}—${task.end}</span>
-                            <span class="task-name">${task.name}</span>
+                            <span class="task-name">${safeName}</span>
                         </div>
                         <div class="task-stats">
                             <span>Planned: <strong>${minutesToStr(plannedMin)}</strong></span>
@@ -1162,7 +1301,7 @@
                         </div>
 
                         <div class="edit-fields">
-                            <input type="text" class="edit-name" value="${task.name}" placeholder="Task name">
+                            <input type="text" class="edit-name" value="${safeName}" placeholder="Task name">
                             <input type="time" class="edit-start" value="${task.start}">
                             <input type="time" class="edit-end" value="${task.end}">
                         </div>
@@ -1205,7 +1344,7 @@
             let plannedMin = 0;
             let actualMin = 0;
             tasks.forEach(t => {
-                plannedMin += timeToMinutes(t.end) - timeToMinutes(t.start);
+                plannedMin += plannedMinutesOf(t);
                 actualMin += getActualMinutes(t);
             });
 
@@ -1224,48 +1363,132 @@
             currentTaskDisplay.innerText = active ? active.name : 'None';
         }
 
-        // ---------- EXPORT TO EXCEL (CSV) ----------
+        // ---------- EXPORT TO EXCEL / CSV ----------
+        function csvEscape(value) {
+            const str = String(value ?? '');
+            if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+            return str;
+        }
+
+        function buildCSV(reportTasks = tasks, reportDateKey = currentDateKey) {
+            let csv = 'Date,Task,Start,End,Planned (min),Actual (min),Lost (min),Completion %\n';
+            reportTasks.forEach(t => {
+                const planned = Number.isFinite(Number(t.plannedMinutes)) ? Number(t.plannedMinutes) : plannedMinutesOf(t);
+                const actual = Number.isFinite(Number(t.actualMinutes)) ? Number(t.actualMinutes) : getActualMinutes(t);
+                const lost = Math.max(0, planned - actual);
+                const pct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+                csv += [
+                    csvEscape(reportDateKey),
+                    csvEscape(t.name),
+                    csvEscape(t.start),
+                    csvEscape(t.end),
+                    planned,
+                    actual,
+                    lost,
+                    `${pct}%`
+                ].join(',') + '\n';
+            });
+
+            const summary = buildSummary(reportTasks.map(t => ({
+                ...t,
+                plannedMinutes: Number.isFinite(Number(t.plannedMinutes)) ? Number(t.plannedMinutes) : plannedMinutesOf(t),
+                actualMinutes: Number.isFinite(Number(t.actualMinutes)) ? Number(t.actualMinutes) : getActualMinutes(t)
+            })));
+
+            csv += `\n${[csvEscape(reportDateKey), csvEscape('TOTAL'), '', '', summary.totalPlannedMinutes, summary.totalActualMinutes, summary.totalLostMinutes, `${summary.completionPercent}%`].join(',')}\n`;
+            csv += `\n${csvEscape('Report date: ' + reportDateKey)}\n`;
+            csv += `${csvEscape('Exported on: ' + new Date().toLocaleString())}\n`;
+            return csv;
+        }
+
+        function downloadCSV(csv, reportDateKey = currentDateKey) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `productivity_${reportDateKey}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
         function exportCSV() {
             if (tasks.length === 0) {
                 statusMsg.innerHTML = '⚠️ No tasks to export. Add some tasks first!';
                 return;
             }
+            const snapshotTasks = tasks.map(t => freezeTaskForReport(t, currentDateKey, Date.now()));
+            const csv = buildCSV(snapshotTasks, currentDateKey);
+            downloadCSV(csv, currentDateKey);
+            statusMsg.innerHTML = '📊 <span class="highlight">Exported!</span> CSV file downloaded. Open it in Excel.';
+            return csv;
+        }
 
-            let csv = 'Task,Start,End,Planned (min),Actual (min),Lost (min),Completion %\n';
-            tasks.forEach(t => {
-                const planned = timeToMinutes(t.end) - timeToMinutes(t.start);
-                const actual = getActualMinutes(t);
-                const lost = Math.max(0, planned - actual);
-                const pct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
-                csv +=
-                    `"${t.name}",${t.start},${t.end},${planned},${actual},${lost},${pct}%\n`;
-            });
+        // ---------- CLOUD SYNC / EMAIL SERVER ----------
+        function taskForStorage(task) {
+            return {
+                id: task.id,
+                name: task.name,
+                start: task.start,
+                end: task.end,
+                actualMs: baseActualMs(task),
+                actualMinutes: Math.round(baseActualMs(task) / 60000),
+                isActive: !!task.isActive,
+                isFinished: !!task.isFinished,
+                startedAtMs: task.isActive ? Number(task.startedAtMs || Date.now()) : null,
+                completed: !!task.completed
+            };
+        }
 
-            // Add summary row
-            let totalPlanned = 0,
-                totalActual = 0;
-            tasks.forEach(t => {
-                totalPlanned += timeToMinutes(t.end) - timeToMinutes(t.start);
-                totalActual += getActualMinutes(t);
-            });
-            const totalLost = Math.max(0, totalPlanned - totalActual);
-            csv += `\n"TOTAL","","",${totalPlanned},${totalActual},${totalLost},${totalPlanned > 0 ? Math.round((totalActual/totalPlanned)*100) : 0}%\n`;
+        function getSnapshotForCloud(reason = 'save') {
+            const storageTasks = tasks.map(taskForStorage);
+            const liveTasks = tasks.map(t => freezeTaskForReport(t, currentDateKey, Date.now()));
+            return {
+                type: 'snapshot',
+                app: 'Honesty Timer Pro',
+                recipient: REPORT_EMAIL,
+                token: REPORT_API_TOKEN,
+                dateKey: currentDateKey,
+                reason,
+                savedAt: new Date().toISOString(),
+                savedAtMs: Date.now(),
+                tasks: storageTasks,
+                summary: buildSummary(liveTasks)
+            };
+        }
 
-            // Add date
-            csv += `\n"Exported on: ${new Date().toLocaleString()}"\n`;
+        function postToReportServer(payload, force = false) {
+            if (!ENABLE_CLOUD_SYNC || !REPORT_WEB_APP_URL.trim()) return;
+            const body = JSON.stringify(payload);
 
-            // Download
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `productivity_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            try {
+                if (force && navigator.sendBeacon) {
+                    const queued = navigator.sendBeacon(
+                        REPORT_WEB_APP_URL,
+                        new Blob([body], { type: 'text/plain;charset=UTF-8' })
+                    );
+                    if (queued) return;
+                }
 
-            statusMsg.innerHTML = '📊 <span class="highlight">Exported!</span> CSV file downloaded. Open in Excel.';
+                fetch(REPORT_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                    body,
+                    keepalive: !!force
+                }).catch(err => console.log('Cloud sync failed:', err));
+            } catch (e) {
+                console.log('Cloud sync error:', e);
+            }
+        }
+
+        function syncSnapshotToCloud(reason = 'save', force = false) {
+            if (!ENABLE_CLOUD_SYNC || !REPORT_WEB_APP_URL.trim()) return;
+            const now = Date.now();
+            if (!force && now - lastCloudSyncMs < 5000) return;
+            lastCloudSyncMs = now;
+            postToReportServer(getSnapshotForCloud(reason), force);
         }
 
         // ---------- "MAYBE LATER" LIST ----------
@@ -1284,7 +1507,7 @@
             const input = document.getElementById('maybeInput');
             const text = input.value.trim();
             if (!text) return;
-            maybeItems.push({ id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4), text: text });
+            maybeItems.push({ id: createTaskId(), text });
             input.value = '';
             saveMaybeToLocal();
             renderMaybeList();
@@ -1299,20 +1522,14 @@
         function addMaybeToTask(id) {
             const item = maybeItems.find(i => i.id === id);
             if (!item) return;
-            // Pre-fill the add form with this item
             document.getElementById('taskName').value = item.text;
-            // Auto-set times to current hour + 1 hour
             const now = new Date();
-            const startH = String(now.getHours()).padStart(2, '0');
-            const startM = String(now.getMinutes()).padStart(2, '0');
-            const endH = String(now.getHours() + 1).padStart(2, '0');
-            document.getElementById('startTime').value = `${startH}:${startM}`;
-            document.getElementById('endTime').value = `${endH}:${startM}`;
-            // Remove from maybe list
+            const end = new Date(now.getTime() + 60 * 60000);
+            document.getElementById('startTime').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            document.getElementById('endTime').value = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
             deleteMaybeItem(id);
             toggleModal(false);
-            statusMsg.innerHTML = `📝 Moved "${item.text}" to task form. Click Add to schedule it.`;
-            // Focus the add button
+            statusMsg.innerHTML = `📝 Moved "${escapeHtml(item.text)}" to task form. Click Add to schedule it.`;
             document.getElementById('addTaskBtn').focus();
         }
 
@@ -1326,7 +1543,7 @@
             maybeItems.forEach(item => {
                 html += `
                     <div class="maybe-item">
-                        <span class="item-text">${item.text}</span>
+                        <span class="item-text">${escapeHtml(item.text)}</span>
                         <div class="item-actions">
                             <button class="add-to-task" onclick="addMaybeToTask('${item.id}')" title="Add to schedule">📋</button>
                             <button class="delete-maybe" onclick="deleteMaybeItem('${item.id}')" title="Delete">✕</button>
@@ -1353,44 +1570,60 @@
         }
 
         // ---------- STORAGE ----------
-        function saveToLocal() {
+        function normalizeTask(raw) {
+            const actualMs = Number.isFinite(Number(raw.actualMs))
+                ? Math.max(0, Number(raw.actualMs))
+                : Math.max(0, Number(raw.actualMinutes || 0) * 60000);
+            return {
+                id: raw.id || createTaskId(),
+                name: raw.name || 'Task',
+                start: raw.start || '00:00',
+                end: raw.end || '00:00',
+                actualMs,
+                actualMinutes: Math.round(actualMs / 60000),
+                isActive: !!raw.isActive && !!raw.startedAtMs,
+                isFinished: !!raw.isFinished,
+                startedAtMs: raw.isActive && raw.startedAtMs ? Number(raw.startedAtMs) : null,
+                completed: !!raw.completed
+            };
+        }
+
+        function saveToLocal(reason = 'save', forceCloud = false) {
             try {
-                const data = tasks.map(t => ({
-                    id: t.id,
-                    name: t.name,
-                    start: t.start,
-                    end: t.end,
-                    actualMinutes: t.actualMinutes || 0,
-                    isFinished: t.isFinished || false,
-                    completed: t.completed || false,
-                }));
-                localStorage.setItem('tasks24', JSON.stringify(data));
-                localStorage.setItem('currentDate', currentDate);
-            } catch (e) {}
+                const data = tasks.map(taskForStorage);
+                localStorage.setItem(LOCAL_TASKS_KEY, JSON.stringify(data));
+                localStorage.setItem(LEGACY_TASKS_KEY, JSON.stringify(data));
+                localStorage.setItem(LOCAL_DATE_KEY, currentDateKey);
+                localStorage.setItem(LEGACY_DATE_KEY, currentDateKey);
+            } catch (e) {
+                console.log('Local save failed:', e);
+            }
+            if (reason) syncSnapshotToCloud(reason, forceCloud);
         }
 
         function loadFromLocal() {
             try {
-                const data = localStorage.getItem('tasks24');
+                currentDateKey = normalizeDateKey(localStorage.getItem(LOCAL_DATE_KEY) || localStorage.getItem(LEGACY_DATE_KEY));
+                const data = localStorage.getItem(LOCAL_TASKS_KEY) || localStorage.getItem(LEGACY_TASKS_KEY);
                 if (data) {
-                    const parsed = JSON.parse(data);
-                    tasks = parsed.map(t => ({
-                        ...t,
-                        isActive: false,
-                        startTimeTrack: null,
-                    }));
-                    activeTaskId = null;
-                    render();
+                    tasks = JSON.parse(data).map(normalizeTask);
                 }
-                const savedDate = localStorage.getItem('currentDate');
-                if (savedDate) {
-                    currentDate = savedDate;
-                    if (isNewDay()) {
-                        // If it's a new day, clear tasks (already handled in checkMidnightReset)
-                        checkMidnightReset();
-                    }
-                }
-            } catch (e) {}
+            } catch (e) {
+                console.log('Local load failed:', e);
+            }
+
+            const todayKey = getDateKey();
+            if (todayKey !== currentDateKey) {
+                finalizeAndResetForNewDay(todayKey, 'opened_after_midnight');
+                return;
+            }
+
+            const active = tasks.find(t => t.isActive && t.startedAtMs);
+            activeTaskId = active ? active.id : null;
+            checkAlarms();
+            render();
+            ensureSecondTimer();
+            saveToLocal('load');
         }
 
         // ---------- CLOCK ----------
@@ -1419,19 +1652,18 @@
                 editingTaskId = null;
                 if (alarmInterval) clearInterval(alarmInterval);
                 if (secondTimer) clearInterval(secondTimer);
+                alarmInterval = null;
                 secondTimer = null;
                 render();
-                saveToLocal();
+                saveToLocal('all_cleared', true);
                 statusMsg.innerHTML = '🗑️ All tasks cleared.';
             }
         });
 
-        // Enter key on maybe input
         document.getElementById('maybeInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') addMaybeItem();
         });
 
-        // Close modal on overlay click
         document.getElementById('maybeModal').addEventListener('click', function(e) {
             if (e.target === this) toggleModal(false);
         });
@@ -1449,14 +1681,17 @@
         setInterval(updateClock, 1000);
         setInterval(checkAlarms, 10000);
         setInterval(checkMidnightReset, 30000);
+        setInterval(() => {
+            if (tasks.some(t => t.isActive)) saveToLocal('autosave');
+        }, 15000);
 
-        // Initialize audio on first touch
         document.addEventListener('touchstart', function initAudioOnTouch() {
             initAudio();
             document.removeEventListener('touchstart', initAudioOnTouch);
         }, { once: true });
 
-        console.log('✅ Honesty Pro loaded with silent mode bypass, background tracking, export, and maybe list.');
+        console.log('✅ Honesty Pro loaded with local close-safe saving, midnight reset, and optional Apps Script email sync.');
     </script>
+
 </body>
 </html>
