@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Honesty Timer - iPhone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background: #0b1120;
+            color: #e2e8f0;
+            padding: 12px;
+            padding-bottom: 40px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0 12px 0;
+            border-bottom: 1px solid #1e293b;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        h1 span:first-child {
+            font-size: 1.3rem;
+        }
+        .live-clock {
+            background: #1e293b;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 2px;
+            border: 1px solid #334155;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 14px 0;
+            background: #1e293b;
+            padding: 14px;
+            border-radius: 14px;
+            border-left: 4px solid #38bdf8;
+        }
+        .stats-grid .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .stats-grid .stat-item .label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.3px;
+        }
+        .stats-grid .stat-item .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-top: 2px;
+        }
+        .stats-grid .stat-item .value.danger {
+            color: #f87171;
+        }
+        .stats-grid .stat-item .value.success {
+            color: #4ade80;
+        }
+        .stats-grid .stat-item .value.warning {
+            color: #fbbf24;
+        }
+
+        .input-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #1e293b;
+            padding: 16px;
+            border-radius: 14px;
+            margin: 14px 0;
+            align-items: center;
+        }
+        .input-section input,
+        .input-section button {
+            padding: 14px 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 0.95rem;
+            background: #0f172a;
+            color: #f1f5f9;
+            border: 1px solid #334155;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .input-section input:focus {
+            outline: 2px solid #38bdf8;
+            border-color: transparent;
+        }
+        .input-section input[type="text"] {
+            flex: 2;
+            min-width: 140px;
+        }
+        .input-section input[type="time"] {
+            width: 120px;
+            padding: 14px 10px;
+        }
+        .input-section button {
+            background: #38bdf8;
+            color: #0b1120;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+            border: none;
+            padding: 14px 20px;
+            flex: 1;
+            min-width: 80px;
+            touch-action: manipulation;
+        }
+        .input-section button:active {
+            transform: scale(0.96);
+            opacity: 0.8;
+        }
+        .input-section button.danger {
+            background: #451a1a;
+            color: #fca5a5;
+        }
+        .input-section button.danger:active {
+            background: #7f1d1d;
+        }
+
+        .test-alarm-btn {
+            background: #7c3aed !important;
+            color: #fff !important;
+            flex: 0.5 !important;
+            min-width: 60px !important;
+            font-size: 0.8rem !important;
+        }
+        .test-alarm-btn:active {
+            background: #a78bfa !important;
+        }
+
+        .timeline {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid #2d3a4f;
+        }
+        .timeline-header {
+            display: none;
+        }
+        .timeline-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 520px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 2px;
+        }
+        .timeline-grid::-webkit-scrollbar {
+            width: 4px;
+        }
+        .timeline-grid::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 8px;
+        }
+
+        /* Task Row */
+        .task-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #0f172a;
+            border-left: 4px solid #475569;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .task-row.active {
+            background: #064e3b;
+            border-left: 4px solid #4ade80;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.08);
+        }
+        .task-row.finished-alarm {
+            animation: flashRed 0.5s ease 3;
+        }
+        @keyframes flashRed {
+            0% {
+                background: #7f1d1d;
+                border-left: 4px solid #f87171;
+            }
+            100% {
+                background: #0f172a;
+                border-left: 4px solid #475569;
+            }
+        }
+
+        /* Normal view */
+        .task-row .task-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .task-row .task-time {
+            font-family: monospace;
+            font-weight: 600;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+        }
+        .task-row .task-name {
+            font-weight: 600;
+            font-size: 1rem;
+            flex: 1;
+        }
+        .task-row .task-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            padding: 2px 0;
+        }
+        .task-row .task-stats .actual {
+            color: #4ade80;
+            font-weight: 600;
+        }
+        .task-row .task-stats .lost {
+            color: #f87171;
+            font-weight: 600;
+        }
+        .task-row .task-progress {
+            width: 100%;
+        }
+        .task-row .task-progress .bar-bg {
+            height: 6px;
+            background: #2d3a4f;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .task-row .task-progress .bar-bg .fill {
+            height: 100%;
+            background: #4ade80;
+            width: 0%;
+            transition: width 0.5s linear;
+        }
+        .task-row .task-progress .percent {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            margin-top: 3px;
+            display: block;
+        }
+        .task-row .task-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .task-row .task-actions button {
+            border: none;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.1s;
+            touch-action: manipulation;
+            flex: 1;
+            min-width: 60px;
+        }
+        .task-row .task-actions button:active {
+            transform: scale(0.94);
+            opacity: 0.8;
+        }
+        .task-row .task-actions .start-btn {
+            background: #4ade80;
+            color: #052e16;
+        }
+        .task-row .task-actions .start-btn:active {
+            background: #86efac;
+        }
+        .task-row .task-actions .stop-btn {
+            background: #f59e0b;
+            color: #0b1120;
+        }
+        .task-row .task-actions .stop-btn:active {
+            background: #fbbf24;
+        }
+        .task-row .task-actions .edit-btn {
+            background: #3b82f6;
+            color: #fff;
+            flex: 0.7;
+            min-width: 50px;
+        }
+        .task-row .task-actions .edit-btn:active {
+            background: #60a5fa;
+        }
+        .task-row .task-actions .delete-btn {
+            background: #451a1a;
+            color: #fca5a5;
+            flex: 0.5;
+            min-width: 50px;
+        }
+        .task-row .task-actions .delete-btn:active {
+            background: #7f1d1d;
+        }
+        .task-row .task-actions .save-edit-btn {
+            background: #22d3ee;
+            color: #0b1120;
+            flex: 1;
+        }
+        .task-row .task-actions .save-edit-btn:active {
+            background: #67e8f9;
+        }
+        .task-row .task-actions .cancel-edit-btn {
+            background: #475569;
+            color: #f1f5f9;
+            flex: 0.5;
+            min-width: 50px;
+        }
+        .task-row .task-actions .cancel-edit-btn:active {
+            background: #64748b;
+        }
+
+        /* Edit mode fields */
+        .task-row .edit-fields {
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px 0;
+            width: 100%;
+        }
+        .task-row.editing .edit-fields {
+            display: flex;
+        }
+        .task-row.editing .task-top,
+        .task-row.editing .task-stats,
+        .task-row.editing .task-progress {
+            display: none;
+        }
+        .task-row .edit-fields input {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            min-width: 100px;
+        }
+        .task-row .edit-fields input:focus {
+            outline: 2px solid #38bdf8;
+            border-color: transparent;
+        }
+        .task-row .edit-fields input[type="time"] {
+            flex: 0.7;
+            min-width: 80px;
+        }
+
+        .conflict-warning {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin: 8px 0;
+            display: none;
+            border-left: 4px solid #f87171;
+        }
+        .conflict-warning.show {
+            display: block;
+        }
+
+        .empty-state {
+            color: #64748b;
+            text-align: center;
+            padding: 40px 0;
+            font-style: italic;
+            font-size: 0.95rem;
+        }
+
+        #statusMessage {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #1e293b;
+            border-radius: 12px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            border-left: 4px solid #38bdf8;
+            line-height: 1.5;
+        }
+        #statusMessage .highlight {
+            color: #4ade80;
+            font-weight: 600;
+        }
+        #statusMessage .danger {
+            color: #f87171;
+            font-weight: 600;
+        }
+
+        @media (max-width: 420px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+                padding: 10px;
+                gap: 6px;
+            }
+            .stats-grid .stat-item .value {
+                font-size: 0.95rem;
+            }
+            .input-section input[type="time"] {
+                width: 100px;
+                padding: 12px 8px;
+                font-size: 0.85rem;
+            }
+            .input-section input[type="text"] {
+                font-size: 0.85rem;
+                padding: 12px 12px;
+            }
+            .input-section button {
+                font-size: 0.8rem;
+                padding: 12px 14px;
+            }
+            .task-row .task-name {
+                font-size: 0.9rem;
+            }
+            .task-row .task-actions button {
+                padding: 8px 12px;
+                font-size: 0.7rem;
+                min-width: 50px;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            .live-clock {
+                font-size: 1rem;
+                padding: 4px 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .input-section input[type="time"] {
+                width: 80px;
+            }
+        }
+
+        button,
+        input {
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>⏳ Honesty</span>
+            <span class="live-clock" id="liveClock">00:00:00</span>
+        </h1>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="label">📋 Tasks</span>
+                <span class="value" id="totalTasks">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">⏱️ Planned</span>
+                <span class="value" id="totalPlanned">0h</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">✅ Actual</span>
+                <span class="value success" id="totalActual">0h</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">⚠️ Lost</span>
+                <span class="value danger" id="totalLost">0h</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">▶️ Current</span>
+                <span class="value warning" id="currentTaskDisplay">None</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">🔊 Test</span>
+                <button id="testAlarmBtn" style="background:#7c3aed;color:#fff;border:none;padding:6px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;cursor:pointer;touch-action:manipulation;width:100%;">🔔 Test</button>
+            </div>
+        </div>
+
+        <div class="conflict-warning" id="conflictWarning">⚠️ Time conflict! This overlaps with an existing task.</div>
+
+        <div class="input-section">
+            <input type="text" id="taskName" placeholder="Task name" value="Deep Work">
+            <input type="time" id="startTime" value="14:00">
+            <input type="time" id="endTime" value="16:00">
+            <button id="addTaskBtn">➕ Add</button>
+            <button id="clearAllBtn" class="danger">🗑️</button>
+        </div>
+
+        <div class="timeline">
+            <div class="timeline-grid" id="timelineGrid">
+                <div class="empty-state">No tasks. Add your 24h plan above.</div>
+            </div>
+        </div>
+
+        <div id="statusMessage">🔔 Ready. Add tasks, tap <span class="highlight">Start</span> to begin tracking.</div>
+    </div>
+
+    <script>
+        // ---------- CORE DATA ----------
+        let tasks = [];
+        let activeTaskId = null;
+        let alarmInterval = null;
+        let secondTimer = null;
+        let audioCtx = null;
+        let editingTaskId = null;
+
+        const grid = document.getElementById('timelineGrid');
+        const liveClock = document.getElementById('liveClock');
+        const totalTasksSpan = document.getElementById('totalTasks');
+        const totalPlannedSpan = document.getElementById('totalPlanned');
+        const totalActualSpan = document.getElementById('totalActual');
+        const totalLostSpan = document.getElementById('totalLost');
+        const currentTaskDisplay = document.getElementById('currentTaskDisplay');
+        const statusMsg = document.getElementById('statusMessage');
+        const conflictWarning = document.getElementById('conflictWarning');
+
+        // ---------- AUDIO ----------
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playBeep(frequency = 800, duration = 300, times = 1, delay = 400) {
+            try {
+                const ctx = initAudio();
+                let count = 0;
+
+                function beep() {
+                    if (count >= times) return;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = frequency;
+                    osc.type = 'sine';
+                    gain.gain.value = 0.25;
+                    osc.start();
+                    osc.stop(ctx.currentTime + duration / 1000);
+                    count++;
+                    if (count < times) {
+                        setTimeout(beep, delay);
+                    }
+                }
+                beep();
+            } catch (e) {
+                console.log('Audio error:', e);
+                audioCtx = null;
+                setTimeout(() => {
+                    try {
+                        const ctx2 = initAudio();
+                        const osc = ctx2.createOscillator();
+                        const gain = ctx2.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx2.destination);
+                        osc.frequency.value = frequency;
+                        osc.type = 'sine';
+                        gain.gain.value = 0.2;
+                        osc.start();
+                        osc.stop(ctx2.currentTime + duration / 1000);
+                    } catch (e2) { console.log('Fallback audio failed'); }
+                }, 100);
+            }
+        }
+
+        document.getElementById('testAlarmBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            initAudio();
+            playBeep(880, 300, 3, 300);
+            statusMsg.innerHTML = '🔊 <span class="highlight">Alarm test!</span> You should hear 3 beeps.';
+        });
+
+        // ---------- TIME HELPERS ----------
+        function timeToMinutes(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function minutesToStr(min) {
+            if (min < 0) min = 0;
+            const h = Math.floor(min / 60);
+            const m = Math.round(min % 60);
+            if (h === 0) return `${m}m`;
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}m`;
+        }
+
+        function getCurrentTimeStr() {
+            const now = new Date();
+            return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        }
+
+        function getCurrentMinutes() {
+            const now = new Date();
+            return now.getHours() * 60 + now.getMinutes();
+        }
+
+        // ---------- CONFLICT CHECK ----------
+        function hasConflict(start, end, excludeId = null) {
+            const startMin = timeToMinutes(start);
+            const endMin = timeToMinutes(end);
+            return tasks.some(t => {
+                if (excludeId && t.id === excludeId) return false;
+                const tStart = timeToMinutes(t.start);
+                const tEnd = timeToMinutes(t.end);
+                return (startMin < tEnd && endMin > tStart);
+            });
+        }
+
+        // ---------- TASK CRUD ----------
+        function addTask(name, start, end) {
+            if (!name.trim()) { alert('Enter a task name'); return; }
+            if (start >= end) { alert('End time must be after start time'); return; }
+
+            if (hasConflict(start, end)) {
+                conflictWarning.classList.add('show');
+                setTimeout(() => conflictWarning.classList.remove('show'), 3000);
+                statusMsg.innerHTML = '⚠️ <span class="danger">Conflict!</span> Another task already occupies this time.';
+                playBeep(400, 200, 2);
+                return;
+            }
+            conflictWarning.classList.remove('show');
+
+            const task = {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+                name: name.trim(),
+                start: start,
+                end: end,
+                isActive: false,
+                isFinished: false,
+                actualMinutes: 0,
+                startTimeTrack: null,
+                completed: false
+            };
+            tasks.push(task);
+            tasks.sort((a, b) => a.start.localeCompare(b.start));
+            render();
+            saveToLocal();
+            statusMsg.innerHTML = `✅ Added "${task.name}" ${start}—${end}`;
+            playBeep(600, 150, 1);
+        }
+
+        function deleteTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task && task.isActive) {
+                task.isActive = false;
+                if (activeTaskId === id) activeTaskId = null;
+            }
+            tasks = tasks.filter(t => t.id !== id);
+            if (editingTaskId === id) editingTaskId = null;
+            render();
+            saveToLocal();
+            statusMsg.innerHTML = '🗑️ Task removed.';
+        }
+
+        // ---------- EDIT TASK ----------
+        function startEdit(id) {
+            // If another task is being edited, cancel it first
+            if (editingTaskId && editingTaskId !== id) {
+                cancelEdit(editingTaskId);
+            }
+            editingTaskId = id;
+            render();
+        }
+
+        function cancelEdit(id) {
+            if (editingTaskId === id) {
+                editingTaskId = null;
+                render();
+            }
+        }
+
+        function saveEdit(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            const row = document.querySelector(`[data-task-id="${id}"]`);
+            if (!row) return;
+
+            const nameInput = row.querySelector('.edit-name');
+            const startInput = row.querySelector('.edit-start');
+            const endInput = row.querySelector('.edit-end');
+
+            const newName = nameInput.value.trim();
+            const newStart = startInput.value;
+            const newEnd = endInput.value;
+
+            if (!newName) { alert('Task name cannot be empty'); return; }
+            if (newStart >= newEnd) { alert('End time must be after start time'); return; }
+
+            // Check for conflicts (excluding this task)
+            if (hasConflict(newStart, newEnd, id)) {
+                conflictWarning.classList.add('show');
+                setTimeout(() => conflictWarning.classList.remove('show'), 3000);
+                statusMsg.innerHTML = '⚠️ <span class="danger">Conflict!</span> This time overlaps with another task.';
+                playBeep(400, 200, 2);
+                return;
+            }
+            conflictWarning.classList.remove('show');
+
+            // If task was active, stop it first (can't change times while running)
+            if (task.isActive) {
+                stopTask(id);
+            }
+
+            task.name = newName;
+            task.start = newStart;
+            task.end = newEnd;
+
+            tasks.sort((a, b) => a.start.localeCompare(b.start));
+            editingTaskId = null;
+            render();
+            saveToLocal();
+            statusMsg.innerHTML = `✏️ Updated "${task.name}" to ${task.start}—${task.end}`;
+            playBeep(500, 150, 1);
+        }
+
+        // ---------- START / STOP ----------
+        function startTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            if (task.isActive) return;
+
+            // If editing, cancel edit
+            if (editingTaskId) {
+                cancelEdit(editingTaskId);
+            }
+
+            tasks.forEach(t => {
+                if (t.isActive && t.id !== id) {
+                    stopTask(t.id);
+                }
+            });
+
+            initAudio();
+
+            task.isActive = true;
+            task.isFinished = false;
+            activeTaskId = id;
+            task.startTimeTrack = getCurrentMinutes();
+
+            playBeep(880, 200, 2);
+            statusMsg.innerHTML = `🔔 <span class="highlight">STARTED</span> "${task.name}" at ${task.start}`;
+
+            if (alarmInterval) clearInterval(alarmInterval);
+            alarmInterval = setInterval(checkAlarms, 5000);
+            checkAlarms();
+
+            if (secondTimer) clearInterval(secondTimer);
+            secondTimer = setInterval(() => { render(); }, 1000);
+
+            render();
+            saveToLocal();
+        }
+
+        function stopTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            if (task.isActive && task.startTimeTrack !== null) {
+                const now = getCurrentMinutes();
+                const elapsed = now - task.startTimeTrack;
+                if (elapsed > 0) {
+                    task.actualMinutes += elapsed;
+                }
+                task.startTimeTrack = null;
+            }
+
+            task.isActive = false;
+            if (activeTaskId === id) activeTaskId = null;
+
+            if (!tasks.some(t => t.isActive)) {
+                if (secondTimer) clearInterval(secondTimer);
+                secondTimer = null;
+            }
+
+            render();
+            saveToLocal();
+            statusMsg.innerHTML = `⏹️ Stopped "${task.name}"`;
+        }
+
+        function getActualMinutes(task) {
+            let total = task.actualMinutes || 0;
+            if (task.isActive && task.startTimeTrack !== null) {
+                const now = getCurrentMinutes();
+                const elapsed = now - task.startTimeTrack;
+                if (elapsed > 0) total += elapsed;
+            }
+            return total;
+        }
+
+        // ---------- ALARM CHECKER ----------
+        function checkAlarms() {
+            const currentTime = getCurrentTimeStr();
+            tasks.forEach(task => {
+                if (!task.isActive) return;
+                if (currentTime >= task.end) {
+                    initAudio();
+                    playBeep(1000, 400, 3, 350);
+
+                    const elapsed = getActualMinutes(task);
+                    task.actualMinutes = elapsed;
+                    task.isActive = false;
+                    task.isFinished = true;
+                    task.startTimeTrack = null;
+                    activeTaskId = null;
+
+                    const row = document.querySelector(`[data-task-id="${task.id}"]`);
+                    if (row) {
+                        row.classList.add('finished-alarm');
+                        setTimeout(() => row.classList.remove('finished-alarm'), 2000);
+                    }
+
+                    statusMsg.innerHTML =
+                        `🔔 <span class="danger">FINISHED</span> "${task.name}" at ${task.end}! Actual: <span class="highlight">${minutesToStr(task.actualMinutes)}</span>`;
+
+                    if (!tasks.some(t => t.isActive)) {
+                        if (secondTimer) clearInterval(secondTimer);
+                        secondTimer = null;
+                    }
+
+                    render();
+                    saveToLocal();
+                }
+            });
+        }
+
+        // ---------- RENDER ----------
+        function render() {
+            updateStats();
+
+            if (tasks.length === 0) {
+                grid.innerHTML = `<div class="empty-state">No tasks planned. Build your 24h schedule!</div>`;
+                return;
+            }
+
+            let html = '';
+            tasks.forEach(task => {
+                const isActive = task.isActive;
+                const isEditing = (editingTaskId === task.id);
+                const plannedMin = timeToMinutes(task.end) - timeToMinutes(task.start);
+                const actualMin = getActualMinutes(task);
+                const lostMin = Math.max(0, plannedMin - actualMin);
+                const percent = plannedMin > 0 ? Math.min(100, (actualMin / plannedMin) * 100) : 0;
+
+                let progress = 0;
+                if (isActive) {
+                    const nowMin = getCurrentMinutes();
+                    const startMin = timeToMinutes(task.start);
+                    const endMin = timeToMinutes(task.end);
+                    const total = endMin - startMin;
+                    const elapsed = nowMin - startMin;
+                    progress = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
+                } else if (task.isFinished) {
+                    progress = 100;
+                }
+
+                const percentColor = percent >= 80 ? '#4ade80' : percent >= 50 ? '#fbbf24' : '#f87171';
+
+                html += `
+                    <div class="task-row ${isActive ? 'active' : ''} ${isEditing ? 'editing' : ''}" data-task-id="${task.id}">
+                        <!-- Normal view -->
+                        <div class="task-top">
+                            <span class="task-time">${task.start}—${task.end}</span>
+                            <span class="task-name">${task.name}</span>
+                        </div>
+                        <div class="task-stats">
+                            <span>Planned: <strong>${minutesToStr(plannedMin)}</strong></span>
+                            <span class="actual">Actual: <strong>${minutesToStr(actualMin)}</strong></span>
+                            ${lostMin > 0 ? `<span class="lost">Lost: ${minutesToStr(lostMin)}</span>` : ''}
+                        </div>
+                        <div class="task-progress">
+                            <div class="bar-bg">
+                                <div class="fill" style="width: ${progress}%;"></div>
+                            </div>
+                            <span class="percent" style="color: ${percentColor};">${Math.round(percent)}% done</span>
+                        </div>
+
+                        <!-- Edit fields -->
+                        <div class="edit-fields">
+                            <input type="text" class="edit-name" value="${task.name}" placeholder="Task name">
+                            <input type="time" class="edit-start" value="${task.start}">
+                            <input type="time" class="edit-end" value="${task.end}">
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="task-actions">
+                            ${isEditing ? `
+                                <button class="save-edit-btn" onclick="saveEdit('${task.id}')">💾 Save</button>
+                                <button class="cancel-edit-btn" onclick="cancelEdit('${task.id}')">✕ Cancel</button>
+                            ` : `
+                                ${!isActive ? `<button class="start-btn" onclick="startTask('${task.id}')">▶ Start</button>` 
+                                             : `<button class="stop-btn" onclick="stopTask('${task.id}')">⏹ Stop</button>`}
+                                <button class="edit-btn" onclick="startEdit('${task.id}')">✏️ Edit</button>
+                                <button class="delete-btn" onclick="deleteTask('${task.id}')">✕</button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+            updateCurrentTask();
+
+            // If editing, focus the name input
+            if (editingTaskId) {
+                const row = document.querySelector(`[data-task-id="${editingTaskId}"]`);
+                if (row) {
+                    const nameInput = row.querySelector('.edit-name');
+                    if (nameInput) {
+                        setTimeout(() => nameInput.focus(), 100);
+                        nameInput.select();
+                    }
+                }
+            }
+        }
+
+        // ---------- STATS ----------
+        function updateStats() {
+            totalTasksSpan.innerText = tasks.length;
+
+            let plannedMin = 0;
+            let actualMin = 0;
+            tasks.forEach(t => {
+                plannedMin += timeToMinutes(t.end) - timeToMinutes(t.start);
+                actualMin += getActualMinutes(t);
+            });
+
+            const lostMin = Math.max(0, plannedMin - actualMin);
+            totalPlannedSpan.innerText = minutesToStr(plannedMin);
+            totalActualSpan.innerText = minutesToStr(actualMin);
+            totalLostSpan.innerText = minutesToStr(lostMin);
+
+            if (lostMin > 30) totalLostSpan.style.color = '#f87171';
+            else if (lostMin > 10) totalLostSpan.style.color = '#fbbf24';
+            else totalLostSpan.style.color = '#4ade80';
+        }
+
+        function updateCurrentTask() {
+            const active = tasks.find(t => t.isActive);
+            currentTaskDisplay.innerText = active ? active.name : 'None';
+        }
+
+        // ---------- STORAGE ----------
+        function saveToLocal() {
+            try {
+                const data = tasks.map(t => ({
+                    id: t.id,
+                    name: t.name,
+                    start: t.start,
+                    end: t.end,
+                    actualMinutes: t.actualMinutes || 0,
+                    isFinished: t.isFinished || false,
+                    completed: t.completed || false,
+                }));
+                localStorage.setItem('tasks24', JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        function loadFromLocal() {
+            try {
+                const data = localStorage.getItem('tasks24');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    tasks = parsed.map(t => ({
+                        ...t,
+                        isActive: false,
+                        startTimeTrack: null,
+                    }));
+                    activeTaskId = null;
+                    render();
+                }
+            } catch (e) {}
+        }
+
+        // ---------- CLOCK ----------
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            liveClock.innerText = `${h}:${m}:${s}`;
+        }
+
+        // ---------- EVENTS ----------
+        document.getElementById('addTaskBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('taskName').value;
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            addTask(name, start, end);
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Delete ALL tasks? This resets all tracking.')) {
+                tasks = [];
+                activeTaskId = null;
+                editingTaskId = null;
+                if (alarmInterval) clearInterval(alarmInterval);
+                if (secondTimer) clearInterval(secondTimer);
+                secondTimer = null;
+                render();
+                saveToLocal();
+                statusMsg.innerHTML = '🗑️ All tasks cleared.';
+            }
+        });
+
+        document.querySelectorAll('.input-section input').forEach(inp => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') document.getElementById('addTaskBtn').click();
+            });
+        });
+
+        // ---------- INIT ----------
+        loadFromLocal();
+        updateClock();
+        setInterval(updateClock, 1000);
+        setInterval(checkAlarms, 10000);
+
+        document.addEventListener('touchstart', function initAudioOnTouch() {
+            initAudio();
+            document.removeEventListener('touchstart', initAudioOnTouch);
+        }, { once: true });
+
+        console.log('✅ iPhone Honesty Dashboard loaded with inline editing.');
+    </script>
+</body>
+</html>
