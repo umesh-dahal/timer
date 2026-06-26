@@ -708,8 +708,8 @@
         // Local save works immediately. Email automation needs the Google Apps Script URL.
         const REPORT_EMAIL = 'da.umeshh@gmail.com';
         const REPORT_API_TOKEN = 'ww2AL52EEFJtIplNNmE1s3DUZG2kLt91';
-        const REPORT_WEB_APP_URL = ''; // Paste your deployed Apps Script /exec URL here.
-        const ENABLE_CLOUD_SYNC = false; // Change to true after REPORT_WEB_APP_URL is added.
+        const REPORT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx-EQnbU4kbJ0XMj8cmLkN14eBakp8I1V4Lb3_eHNFWKO79b2dE3UxBBxxIhCQ_H03VgA/exec';
+        const ENABLE_CLOUD_SYNC = true;
 
         const LOCAL_TASKS_KEY = 'honestyProTasksV2';
         const LEGACY_TASKS_KEY = 'tasks24';
@@ -865,6 +865,21 @@
         function getCurrentTimeStr() {
             const now = new Date();
             return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        }
+
+        async function syncToCloud() {
+            if (!ENABLE_CLOUD_SYNC) return;
+        
+            await fetch(REPORT_WEB_APP_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    token: "YOUR_SECRET_TOKEN",
+                    snapshot: tasks
+                })
+            });
         }
 
         function getCurrentMinutes() {
